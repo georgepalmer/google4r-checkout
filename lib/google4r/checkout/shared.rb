@@ -249,7 +249,7 @@ module Google4R #:nodoc:
       end
       
       # DigitalContent information for this item. Optional.
-      attr_reader :digital_content
+      attr_accessor :digital_content
       
       def create_digital_content(digital_content=nil, &block)
         
@@ -326,6 +326,11 @@ module Google4R #:nodoc:
         digital_content_element = element.elements['digital-content']
         if not digital_content_element.nil?
           result.create_digital_content(DigitalContent.create_from_element(digital_content_element))
+        end
+        
+        subscription_element = element.elements["subscription"]
+        if not subscription_element.nil?
+          result.create_subscription(Subscription.create_from_element(subscription_element))
         end
         
         return result
@@ -445,7 +450,8 @@ module Google4R #:nodoc:
         attr_reader :payments
         
         def add_payment(&block)
-          payment = SubscriptionPayment.new(self)
+          payment = SubscriptionPayment.new
+          payment.subscription = self
           @payments << payment
 
           # Pass the newly generated payment to the given block to set its attributes.
@@ -478,14 +484,8 @@ module Google4R #:nodoc:
           result.period = element.attributes['period'] rescue nil
           result.start_date = Time.iso8601(element.attributes['start-date']) rescue nil
           result.type = element.attributes['type'] rescue nil
-          
-          element.elements['payments/subscription-payment'].each do |payment_element|
-            result.payments << SubscriptionPayment.create_from_element(subscription, payment_element)
-          end
-          
-          element.elements['recurrent-item'].each do |item_element|
-            result.recurrent_items << Item.create_from_element(item_element)
-          end
+          result.recurrent_items << RecurrentItem.create_from_element(element.elements['recurrent-item'], result)
+          result.payments << SubscriptionPayment.create_from_element(result, element.elements['payments/subscription-payment'])
           
           return result
         end
@@ -505,10 +505,6 @@ module Google4R #:nodoc:
           # The maximum amount that you will be allowed to charge the customer, including
           # tax, for all recurrences (Money instance, required).
           attr_reader :maximum_charge
-          
-          def initialize(subscription)
-            @subscription = subscription
-          end
     
           # Sets the maximum charge for this subscription payment. money must respond to
           # :cents and :currency as the Money class does.
@@ -551,9 +547,9 @@ module Google4R #:nodoc:
             result.name = item.name
             result.private_data = item.private_data
             result.quantity = item.quantity
-            result.tax_table = item.tax_table
+            result.tax_table = item.tax_table if item.tax_table
             result.unit_price = item.unit_price
-            result.weight = item.weight
+            result.weight = item.weight if item.weight
             
             return result
           end

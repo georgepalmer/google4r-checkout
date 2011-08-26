@@ -187,9 +187,11 @@ module Google4R #:nodoc:
         end
         
         # <shipping-methods>
-        shippings_element = flow_element.add_element('shipping-methods')
-        command.shipping_methods.each do |shipping_method|
-          self.process_shipping_method(shippings_element, shipping_method)
+        unless command.shipping_methods.empty?
+          shippings_element = flow_element.add_element('shipping-methods')
+          command.shipping_methods.each do |shipping_method|
+            self.process_shipping_method(shippings_element, shipping_method)
+          end
         end
 
         # <analytics-data>
